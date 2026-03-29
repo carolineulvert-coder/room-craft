@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoomCraft — 3D Room Planner + Polycam</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0f0e0c;
+    --panel: #1a1815;
+    --panel2: #221f1a;
+    --border: #2e2a24;
+    --accent: #c8a96e;
+    --accent2: #e8c98e;
+    --text: #f0ebe3;
+    --muted: #7a7268;
+    --danger: #c06060;
+    --success: #6aaa7a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--accent); }
+  .logo span { color: var(--text); font-style: italic; }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  .btn {
+    padding: 7px 13px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #1a1400; border-color: var(--accent); font-weight: 600; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); color: #1a1400; }
+  .btn-success { background: var(--success); color: #0a1a0a; border-color: var(--success); font-weight: 600; }
+
+  /* POLYCAM IMPORT BANNER */
+  .import-banner {
+    background: linear-gradient(135deg, #1a1f14 0%, #141a1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  .polycam-badge {
+    background: linear-gradient(135deg, #2a3a2a, #1e2e2e);
+    border: 1px solid #3a5a3a;
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #7ad07a;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .import-info {
+    flex: 1;
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .import-info strong { color: var(--text); }
+
+  .import-file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: linear-gradient(135deg, #2a3a1a, #1a2a1a);
+    border: 1.5px solid #4a7a4a;
+    border-radius: 8px;
+    color: #9ada8a;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .import-file-btn:hover {
+    background: linear-gradient(135deg, #354a22, #224222);
+    border-color: #6aaa5a;
+    color: #c0f0a0;
+    box-shadow: 0 0 12px rgba(100,200,80,0.15);
+  }
+
+  .scan-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.74rem;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    max-width: 260px;
+  }
+  .scan-status.loaded { border-color: #3a5a3a; background: #1a2a1a; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .scan-status.loaded .status-dot { background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+  /* SCAN CONTROLS */
+  .scan-controls {
+    display: none;
+    gap: 6px;
+    align-items: center;
+  }
+  .scan-controls.visible { display: flex; }
+
+  /* MAIN LAYOUT */
+  .app-body { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 255px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab {
+    flex: 1;
+    padding: 9px 4px;
+    text-align: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .sidebar-content { flex: 1; overflow-y: auto; padding: 12px; }
+  .sidebar-content::-webkit-scrollbar { width: 4px; }
+  .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-label {
+    font-size: 0.63rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 12px 0 7px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 7px;
+    align-items: center;
+  }
+  .input-row label { font-size: 0.73rem; color: var(--muted); width: 50px; flex-shrink: 0; }
+
+  input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+
+  .val-display { font-size: 0.73rem; color: var(--accent); width: 36px; text-align: right; }
+
+  .furniture-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+
+  .furn-item {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .furn-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .furn-icon { font-size: 1.5rem; display: block; margin-bottom: 3px; }
+  .furn-name { font-size: 0.66rem; color: var(--muted); font-weight: 500; }
+  .furn-dims { font-size: 0.58rem; color: var(--border); margin-top: 1px; }
+
+  .color-swatches { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .swatch {
+    width: 21px; height: 21px; border-radius: 4px; cursor: pointer;
+    border: 2px solid transparent; transition: border-color 0.15s;
+  }
+  .swatch.selected { border-color: var(--accent); }
+
+  .prop-panel {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px; margin-top: 8px;
+  }
+  .prop-title { font-size: 0.74rem; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+
+  .delete-btn {
+    width: 100%; padding: 6px;
+    background: transparent; border: 1px solid var(--danger);
+    color: var(--danger); border-radius: 5px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.7rem;
+    font-weight: 600; cursor: pointer; margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .delete-btn:hover { background: var(--danger); color: #fff; }
+
+  /* CANVAS AREA */
+  .canvas-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+  .view-toolbar {
+    display: flex; gap: 5px; padding: 7px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    align-items: center; flex-shrink: 0;
+  }
+
+  .view-mode-btn {
+    padding: 4px 11px; border-radius: 5px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.05em; cursor: pointer; transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .view-mode-btn.active { background: var(--accent); color: #1a1400; border-color: var(--accent); }
+
+  .opacity-control { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .opacity-control label { font-size: 0.68rem; color: var(--muted); }
+  .opacity-control input { width: 70px; accent-color: var(--accent); }
+
+  #mainCanvas { flex: 1; display: block; cursor: grab; touch-action: none; }
+  #mainCanvas:active { cursor: grabbing; }
+
+  #floorCanvas { position: absolute; top: 36px; left: 0; right: 0; bottom: 28px; display: none; }
+
+  /* LOADING OVERLAY */
+  .loading-overlay {
+    position: absolute; inset: 36px 0 28px 0;
+    background: rgba(15,14,12,0.88);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; z-index: 50;
+  }
+  .loading-overlay.active { display: flex; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 0.8rem; color: var(--muted); }
+
+  .status-bar {
+    padding: 4px 14px; background: var(--panel); border-top: 1px solid var(--border);
+    font-size: 0.67rem; color: var(--muted); display: flex; gap: 16px; flex-shrink: 0;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* INSTRUCTIONS CARD */
+  .instructions-card {
+    background: linear-gradient(135deg, #1a2018, #181e20);
+    border: 1px solid #2a3a28;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .instructions-card h4 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #7ad07a;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .instructions-card ol {
+    list-style: none;
+    counter-reset: step;
+  }
+  .instructions-card li {
+    counter-increment: step;
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding: 3px 0 3px 20px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .instructions-card li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.68rem;
+  }
+  .instructions-card li strong { color: var(--text); }
+
+  .dim-read {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    font-size: 0.72rem;
+    line-height: 1.8;
+  }
+  .dim-label { color: var(--muted); }
+  .dim-val { color: var(--accent); font-weight: 600; font-size: 0.8rem; }
+
+  input[type=number], input[type=text] {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 7px;
+    border-radius: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=number]:focus, input[type=text]:focus { border-color: var(--accent); }
+
+  select {
+    flex: 1; background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 7px; border-radius: 5px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.75rem; outline: none;
+  }
+  select:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Room<span>Craft</span></div>
+  <div style="font-size:0.7rem; color:var(--muted);">3D Room Planner</div>
+  <div class="header-actions">
+    <button class="btn" onclick="resetRoom()">↺ Reset</button>
+    <button class="btn btn-primary" onclick="saveScreenshot()">⬇ Export PNG</button>
+  </div>
+</header>
+
+<!-- POLYCAM IMPORT BANNER -->
+<div class="import-banner">
+  <div class="polycam-badge">📡 Polycam</div>
+  <div class="import-info">
+    <strong>Import your Polycam room scan</strong> — Export a GLB or GLTF from Polycam, then drop it here to load your real room.
+  </div>
+
+  <div class="scan-status" id="scanStatus">
+    <div class="status-dot"></div>
+    <span id="scanStatusText">No scan loaded</span>
+  </div>
+
+  <button class="import-file-btn" onclick="document.getElementById('glbInput').click()">
+    📂 Choose Polycam File (.zip, .glb, .gltf)
+  </button>
+  <input type="file" id="glbInput" accept=".glb,.gltf,.zip" style="display:none">
+
+  <div class="scan-controls" id="scanControls">
+    <button class="btn" onclick="toggleScanVisible()" id="scanVisBtn">👁 Hide Scan</button>
+    <button class="btn" onclick="removeScan()">✕ Remove</button>
+  </div>
+</div>
+
+<div class="app-body">
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <div class="tab active" onclick="switchTab('room',this)">Room</div>
+      <div class="tab" onclick="switchTab('furniture',this)">Furnish</div>
+      <div class="tab" onclick="switchTab('style',this)">Style</div>
+    </div>
+
+    <div class="sidebar-content">
+
+      <!-- ROOM TAB -->
+      <div id="tab-room" class="tab-panel active">
+
+        <div class="instructions-card">
+          <h4>📱 Polycam Workflow</h4>
+          <ol>
+            <li>Open <strong>Polycam</strong> → scan your room in <strong>Space or LiDAR mode</strong></li>
+            <li>Tap <strong>Export → GLTF</strong> — it will download a <strong>zip file</strong></li>
+            <li>AirDrop / email the file to your computer</li>
+            <li>Click <strong>Choose Polycam File</strong> and select the <strong>.zip directly</strong> — do not unzip it</li>
+            <li>Room dimensions auto-populate from the scan ✓</li>
+          </ol>
+        </div>
+
+        <div class="section-label">Room Dimensions</div>
+        <div id="scannedDims" class="dim-read" style="display:none; margin-bottom:10px;">
+          <div><span class="dim-label">Width: </span><span class="dim-val" id="sdW">—</span></div>
+          <div><span class="dim-label">Depth: </span><span class="dim-val" id="sdD">—</span></div>
+          <div><span class="dim-label">Height: </span><span class="dim-val" id="sdH">—</span></div>
+          <div style="margin-top:4px; font-size:0.65rem; color:var(--muted);">📐 Auto-measured from Polycam scan</div>
+        </div>
+        <div class="input-row" id="calibRow" style="display:none; margin-top:8px;">
+          <label style="width:56px; font-size:0.7rem; color:var(--muted);">Scale</label>
+          <input type="range" id="calibSlider" min="0.2" max="3.0" value="1.0" step="0.05" oninput="rescaleScan()">
+          <span class="val-display" id="calibVal">1.00×</span>
+        </div>
+        <div id="calibHint" style="font-size:0.65rem; color:var(--muted); margin-top:4px; display:none; line-height:1.5;">
+          ↑ If furniture seems too big/small vs your room, drag to fix scale.
+        </div>
+
+        <div id="manualDims">
+          <div class="input-row">
+            <label>Width</label>
+            <input type="range" id="roomW" min="6" max="35" value="14" step="0.5" oninput="updateRoom()">
+            <span class="val-display" id="roomWVal">14 ft</span>
+          </div>
+          <div class="input-row">
+            <label>Depth</label>
+            <input type="range" id="roomD" min="6" max="35" value="12" step="0.5" oninput="updateRoom()">
+            <span class="val-display" id="roomDVal">12 ft</span>
+          </div>
+          <div class="input-row">
+            <label>Height</label>
+            <input type="range" id="roomH" min="7" max="16" value="9" step="0.5" oninput="updateRoom()">
+            <span class="val-display" id="roomHVal">9 ft</span>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:16px;">Preset Rooms</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="loadPreset('living')"><span class="furn-icon">🛋️</span><span class="furn-name">Living Room</span></div>
+          <div class="furn-item" onclick="loadPreset('bedroom')"><span class="furn-icon">🛏️</span><span class="furn-name">Bedroom</span></div>
+          <div class="furn-item" onclick="loadPreset('kitchen')"><span class="furn-icon">🍳</span><span class="furn-name">Kitchen</span></div>
+          <div class="furn-item" onclick="loadPreset('bathroom')"><span class="furn-icon">🚿</span><span class="furn-name">Bathroom</span></div>
+          <div class="furn-item" onclick="loadPreset('office')"><span class="furn-icon">💼</span><span class="furn-name">Office</span></div>
+          <div class="furn-item" onclick="loadPreset('dining')"><span class="furn-icon">🍽️</span><span class="furn-name">Dining Room</span></div>
+        </div>
+
+        <div class="section-label" style="margin-top:16px;">Windows & Doors</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="addFurniture('window')"><span class="furn-icon">🪟</span><span class="furn-name">Window</span></div>
+          <div class="furn-item" onclick="addFurniture('door')"><span class="furn-icon">🚪</span><span class="furn-name">Door</span></div>
+        </div>
+      </div>
+
+      <!-- FURNITURE TAB -->
+      <div id="tab-furniture" class="tab-panel">
+        <div class="section-label">Import from Product URL</div>
+        <div style="background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:10px;">
+          <div style="font-size:0.68rem; color:var(--muted); margin-bottom:8px; line-height:1.5;">
+            Paste a link from IKEA, Wayfair, West Elm, Amazon, etc. — dimensions will be extracted automatically.
+          </div>
+          <div class="input-row" style="margin-bottom:8px;">
+            <input type="text" id="productUrl" placeholder="https://www.wayfair.com/..." style="flex:1; font-size:0.72rem;">
+          </div>
+          <button class="btn btn-primary" style="width:100%;" onclick="importFromUrl()">
+            🔗 Fetch Dimensions
+          </button>
+          <div id="urlStatus" style="margin-top:8px; font-size:0.7rem; color:var(--muted); display:none; line-height:1.6;"></div>
+        </div>
+
+        <div class="section-label">Custom Object (Manual)</div>
+        <div style="background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:10px;">
+          <div class="input-row" style="margin-bottom:6px;">
+            <label style="width:42px;">Name</label>
+            <input type="text" id="customName" placeholder="e.g. Sectional" style="flex:1;">
+          </div>
+          <div class="input-row" style="margin-bottom:6px;">
+            <label style="width:42px;">W (ft)</label>
+            <input type="number" id="customW" value="4" min="0.5" max="30" step="0.5" style="width:58px; flex:none;">
+            <label style="width:auto; margin-left:6px;">D (ft)</label>
+            <input type="number" id="customD" value="3" min="0.5" max="30" step="0.5" style="width:58px; flex:none;">
+            <label style="width:auto; margin-left:6px;">H (ft)</label>
+            <input type="number" id="customH" value="3" min="0.5" max="16" step="0.5" style="width:52px; flex:none;">
+          </div>
+          <button class="btn btn-primary" style="width:100%; margin-top:2px;" onclick="addCustomObject()">+ Add to Room</button>
+        </div>
+        <div class="section-label">Seating</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="addFurniture('sofa')"><span class="furn-icon">🛋️</span><span class="furn-name">Sofa</span><div class="furn-dims">7×3 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('armchair')"><span class="furn-icon">🪑</span><span class="furn-name">Armchair</span><div class="furn-dims">3×3 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('barstool')"><span class="furn-icon">🪑</span><span class="furn-name">Bar Stool</span><div class="furn-dims">1.5×1.5</div></div>
+          <div class="furn-item" onclick="addFurniture('bench')"><span class="furn-icon">🪵</span><span class="furn-name">Bench</span><div class="furn-dims">4×1.5 ft</div></div>
+        </div>
+        <div class="section-label">Tables</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="addFurniture('coffeetable')"><span class="furn-icon">☕</span><span class="furn-name">Coffee Table</span><div class="furn-dims">4×2 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('diningtable')"><span class="furn-icon">🍽️</span><span class="furn-name">Dining Table</span><div class="furn-dims">5×3 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('desk')"><span class="furn-icon">💻</span><span class="furn-name">Desk</span><div class="furn-dims">5×2.5 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('sidetable')"><span class="furn-icon">🕯️</span><span class="furn-name">Side Table</span><div class="furn-dims">2×2 ft</div></div>
+        </div>
+        <div class="section-label">Beds & Storage</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="addFurniture('kingsizebed')"><span class="furn-icon">🛏️</span><span class="furn-name">King Bed</span><div class="furn-dims">6.5×6.5</div></div>
+          <div class="furn-item" onclick="addFurniture('queensizebed')"><span class="furn-icon">🛏️</span><span class="furn-name">Queen Bed</span><div class="furn-dims">5×6.5 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('dresser')"><span class="furn-icon">🗄️</span><span class="furn-name">Dresser</span><div class="furn-dims">4×1.5 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('wardrobe')"><span class="furn-icon">👗</span><span class="furn-name">Wardrobe</span><div class="furn-dims">5×2 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('bookshelf')"><span class="furn-icon">📚</span><span class="furn-name">Bookshelf</span><div class="furn-dims">3×1 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('tvstand')"><span class="furn-icon">📺</span><span class="furn-name">TV Stand</span><div class="furn-dims">5×1.5 ft</div></div>
+        </div>
+        <div class="section-label">Kitchen & Bath</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="addFurniture('kitchen_counter')"><span class="furn-icon">🍳</span><span class="furn-name">Counter</span><div class="furn-dims">6×2 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('kitchen_island')"><span class="furn-icon">🏝️</span><span class="furn-name">Island</span><div class="furn-dims">4×2.5 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('bathtub')"><span class="furn-icon">🛁</span><span class="furn-name">Bathtub</span><div class="furn-dims">5×2.5 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('toilet')"><span class="furn-icon">🚽</span><span class="furn-name">Toilet</span><div class="furn-dims">1.5×2.5</div></div>
+          <div class="furn-item" onclick="addFurniture('sink')"><span class="furn-icon">🚰</span><span class="furn-name">Sink</span><div class="furn-dims">2×1.5 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('shower')"><span class="furn-icon">🚿</span><span class="furn-name">Shower</span><div class="furn-dims">3×3 ft</div></div>
+        </div>
+        <div class="section-label">Decor</div>
+        <div class="furniture-grid">
+          <div class="furn-item" onclick="addFurniture('plant')"><span class="furn-icon">🪴</span><span class="furn-name">Plant</span><div class="furn-dims">1.5×1.5</div></div>
+          <div class="furn-item" onclick="addFurniture('rug')"><span class="furn-icon">🟫</span><span class="furn-name">Area Rug</span><div class="furn-dims">6×4 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('lamp')"><span class="furn-icon">💡</span><span class="furn-name">Floor Lamp</span><div class="furn-dims">1×1 ft</div></div>
+          <div class="furn-item" onclick="addFurniture('fireplace')"><span class="furn-icon">🔥</span><span class="furn-name">Fireplace</span><div class="furn-dims">4×1.5 ft</div></div>
+        </div>
+      </div>
+
+      <!-- STYLE TAB -->
+      <div id="tab-style" class="tab-panel">
+        <div class="section-label">Wall Color</div>
+        <div class="color-swatches" id="wallSwatches"></div>
+        <div class="section-label">Floor Material</div>
+        <div class="color-swatches" id="floorSwatches"></div>
+        <div class="section-label">Ceiling Color</div>
+        <div class="color-swatches" id="ceilingSwatches"></div>
+        <div class="section-label">Ambient Light</div>
+        <div class="input-row">
+          <label>Intensity</label>
+          <input type="range" id="lightSlider" min="0.2" max="2.0" value="0.85" step="0.05" oninput="updateLight()">
+          <span class="val-display" id="lightVal">0.85</span>
+        </div>
+        <div class="section-label">Scan Mesh Opacity</div>
+        <div class="input-row" id="scanOpacityRow">
+          <label>Opacity</label>
+          <input type="range" id="scanOpacity" min="0.1" max="1.0" value="0.72" step="0.05" oninput="updateScanOpacity()">
+          <span class="val-display" id="scanOpacityVal">0.72</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Selected item properties -->
+    <div id="propPanel" style="padding:12px; border-top:1px solid var(--border); display:none;">
+      <div class="prop-panel">
+        <div class="prop-title" id="propTitle">Selected Item</div>
+        <div class="section-label">Dimensions (ft)</div>
+        <div class="input-row">
+          <label>Width</label>
+          <input type="number" id="dimW" min="0.5" max="30" step="0.5" style="width:60px; flex:none;" oninput="resizeSelected()">
+          <label style="width:auto; margin-left:4px;">Depth</label>
+          <input type="number" id="dimD" min="0.5" max="30" step="0.5" style="width:60px; flex:none;" oninput="resizeSelected()">
+          <label style="width:auto; margin-left:4px;">Ht</label>
+          <input type="number" id="dimH" min="0.5" max="16" step="0.5" style="width:52px; flex:none;" oninput="resizeSelected()">
+        </div>
+        <div class="section-label">Rotate</div>
+        <div class="input-row">
+          <label>Angle</label>
+          <input type="range" id="rotSlider" min="0" max="360" value="0" step="15" oninput="rotateSelected()">
+          <span class="val-display" id="rotVal">0°</span>
+        </div>
+        <div class="section-label">Color</div>
+        <div class="color-swatches" id="itemSwatches"></div>
+        <button class="delete-btn" onclick="deleteSelected()">🗑 Remove Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CANVAS -->
+  <div class="canvas-area">
+    <div class="view-toolbar">
+      <button class="view-mode-btn active" onclick="setView('3d',this)">3D View</button>
+      <button class="view-mode-btn" onclick="setView('top',this)">Floor Plan</button>
+      <button class="view-mode-btn" onclick="resetCamera()">⟳ Camera</button>
+      <div class="opacity-control" id="scanOpacityInline" style="display:none;">
+        <label>Scan opacity:</label>
+        <input type="range" id="scanOpInline" min="0.05" max="1.0" value="0.72" step="0.05" oninput="updateScanOpacityInline(this.value)">
+      </div>
+      <div style="margin-left:auto; font-size:0.68rem; color:var(--muted);" id="viewInfo">
+        Drag to orbit · Scroll to zoom · Click items to select
+      </div>
+    </div>
+
+    <canvas id="mainCanvas"></canvas>
+    <canvas id="floorCanvas"></canvas>
+
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">Loading Polycam scan…</div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="roomInfo">Room: 14 × 12 × 9 ft</span>
+  <span id="itemCount">Furniture: 0</span>
+  <span id="scanInfo">No scan loaded</span>
+  <span id="selectedInfo">Click furniture to select & drag</span>
+</div>
+
+<!-- Three.js + GLTFLoader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── GLTFLoader inline (r128 compatible) ─────────────────────────────────────
+// Minimal GLTF/GLB loader
+class GLTFLoader {
+  constructor() { this.manager = THREE.DefaultLoadingManager; }
+
+  load(url, onLoad, onProgress, onError) {
+    fetch(url)
+      .then(r => r.arrayBuffer())
+      .then(buf => this.parse(buf, '', onLoad, onError))
+      .catch(onError);
+  }
+
+  parse(data, path, onLoad, onError) {
+    const magic = new Uint32Array(data, 0, 1)[0];
+    if (magic === 0x46546C67) {
+      this._parseGLB(data, onLoad, onError);
+    } else {
+      try {
+        const text = new TextDecoder().decode(data);
+        const json = JSON.parse(text);
+        this._parseGLTFJson(json, path, null, onLoad, onError);
+      } catch(e) { onError && onError(e); }
+    }
+  }
+
+  parseArrayBuffer(data, onLoad, onError) {
+    this.parse(data, '', onLoad, onError);
+  }
+
+  parseJSON(json, onLoad, onError) {
+    this._parseGLTFJson(json, '', null, onLoad, onError);
+  }
+
+  _parseGLB(data, onLoad, onError) {
+    try {
+      const view = new DataView(data);
+      // header
+      const version = view.getUint32(4, true);
+      const length  = view.getUint32(8, true);
+      let offset = 12;
+      let jsonChunk = null, binChunk = null;
+      while (offset < length) {
+        const chunkLen  = view.getUint32(offset, true);
+        const chunkType = view.getUint32(offset+4, true);
+        offset += 8;
+        if (chunkType === 0x4E4F534A) { // JSON
+          jsonChunk = JSON.parse(new TextDecoder().decode(new Uint8Array(data, offset, chunkLen)));
+        } else if (chunkType === 0x004E4942) { // BIN
+          binChunk = data.slice(offset, offset + chunkLen);
+        }
+        offset += chunkLen;
+      }
+      this._parseGLTFJson(jsonChunk, '', binChunk, onLoad, onError);
+    } catch(e) { onError && onError(e); }
+  }
+
+  _parseGLTFJson(json, path, binBuffer, onLoad, onError) {
+    try {
+      const buffers = [];
+      if (json.buffers) {
+        for (const buf of json.buffers) {
+          if (binBuffer) { buffers.push(binBuffer); }
+          else if (buf.uri && buf.uri.startsWith('data:')) {
+            const b64 = buf.uri.split(',')[1];
+            const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+            buffers.push(bin.buffer);
+          } else {
+            buffers.push(new ArrayBuffer(0));
+          }
+        }
+      }
+
+      const getAccessorData = (idx) => {
+        const acc = json.accessors[idx];
+        const bv  = json.bufferViews[acc.bufferView];
+        const buf = buffers[bv.buffer];
+        const byteOffset = (bv.byteOffset||0) + (acc.byteOffset||0);
+        const TypeMap = { 5120:Int8Array,5121:Uint8Array,5122:Int16Array,5123:Uint16Array,5125:Uint32Array,5126:Float32Array };
+        const CompCount = {SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16};
+        const Ctor = TypeMap[acc.componentType] || Float32Array;
+        const n = CompCount[acc.type] || 1;
+        const byteLen = acc.count * n * Ctor.BYTES_PER_ELEMENT;
+        // Copy bytes first to guarantee alignment — fixes "byte offset N is not aligned"
+        const aligned = new ArrayBuffer(byteLen);
+        new Uint8Array(aligned).set(new Uint8Array(buf, byteOffset, byteLen));
+        return new Ctor(aligned);
+      };
+
+      const scene = new THREE.Group();
+      scene.name = 'GLTFScene';
+
+      const processNode = (nodeIdx, parent) => {
+        const node = json.nodes[nodeIdx];
+        const group = new THREE.Group();
+        group.name = node.name || `node_${nodeIdx}`;
+
+        if (node.matrix) {
+          group.matrix.fromArray(node.matrix);
+          group.matrix.decompose(group.position, group.quaternion, group.scale);
+        } else {
+          if (node.translation) group.position.fromArray(node.translation);
+          if (node.rotation)    group.quaternion.fromArray(node.rotation);
+          if (node.scale)       group.scale.fromArray(node.scale);
+        }
+
+        if (node.mesh !== undefined) {
+          const meshDef = json.meshes[node.mesh];
+          for (const prim of meshDef.primitives) {
+            const geo = new THREE.BufferGeometry();
+
+            if (prim.attributes.POSITION !== undefined) {
+              const pos = getAccessorData(prim.attributes.POSITION);
+              geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+            }
+            if (prim.attributes.NORMAL !== undefined) {
+              const nrm = getAccessorData(prim.attributes.NORMAL);
+              geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nrm), 3));
+            }
+            if (prim.attributes.TEXCOORD_0 !== undefined) {
+              const uv = getAccessorData(prim.attributes.TEXCOORD_0);
+              geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
+            }
+            if (prim.indices !== undefined) {
+              const idx = getAccessorData(prim.indices);
+              geo.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
+            }
+            if (!geo.attributes.normal) geo.computeVertexNormals();
+
+            let mat;
+            if (prim.material !== undefined && json.materials) {
+              const matDef = json.materials[prim.material];
+              const pbr = matDef.pbrMetallicRoughness || {};
+              const baseColor = pbr.baseColorFactor || [0.8,0.8,0.8,1];
+              mat = new THREE.MeshLambertMaterial({
+                color: new THREE.Color(baseColor[0], baseColor[1], baseColor[2]),
+                transparent: baseColor[3] < 1,
+                opacity: baseColor[3],
+                side: THREE.DoubleSide
+              });
+            } else {
+              mat = new THREE.MeshLambertMaterial({ color: 0xccbbaa, side: THREE.DoubleSide });
+            }
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+          }
+        }
+
+        parent.add(group);
+        if (node.children) node.children.forEach(c => processNode(c, group));
+      };
+
+      const sceneIdx = (json.scene !== undefined) ? json.scene : 0;
+      if (json.scenes && json.scenes[sceneIdx] && json.scenes[sceneIdx].nodes) {
+        json.scenes[sceneIdx].nodes.forEach(n => processNode(n, scene));
+      } else if (json.nodes) {
+        json.nodes.forEach((_, i) => processNode(i, scene));
+      }
+
+      onLoad && onLoad({ scene });
+    } catch(e) { onError && onError(e); }
+  }
+}
+
+// ─── State ─────────────────────────────────────────────────────────────────
+const state = {
+  room: { w: 14, d: 12, h: 9 },
+  furniture: [],
+  selectedId: null,
+  wallColor: '#d8ccbe',
+  floorColor: '#b8a882',
+  ceilingColor: '#f0ebe3',
+  lightIntensity: 0.85,
+  viewMode: '3d',
+  nextId: 1,
+  scanLoaded: false,
+  scanVisible: true,
+  scanOpacity: 0.72,
+  scanDims: null,
+  rawScanScale: 3.28084
+};
+
+// ─── Furniture Definitions ─────────────────────────────────────────────────
+const FURNITURE_DEFS = {
+  sofa:           { name:'Sofa',           w:7,   h:3,   d:3,   color:'#7a8fa6', style:'sofa' },
+  armchair:       { name:'Armchair',       w:3,   h:3,   d:3,   color:'#8a7a6a', style:'chair' },
+  barstool:       { name:'Bar Stool',      w:1.5, h:3,   d:1.5, color:'#8a8070', style:'stool' },
+  bench:          { name:'Bench',          w:4,   h:1.5, d:1.5, color:'#9a8870', style:'bench' },
+  coffeetable:    { name:'Coffee Table',   w:4,   h:1.5, d:2,   color:'#7a6a5a', style:'table' },
+  diningtable:    { name:'Dining Table',   w:5,   h:2.5, d:3,   color:'#8a7060', style:'table' },
+  desk:           { name:'Desk',           w:5,   h:2.5, d:2.5, color:'#8a9a8a', style:'table' },
+  sidetable:      { name:'Side Table',     w:2,   h:2,   d:2,   color:'#8a7a6a', style:'table' },
+  kingsizebed:    { name:'King Bed',       w:6.5, h:4,   d:6.5, color:'#9a8a8a', style:'bed' },
+  queensizebed:   { name:'Queen Bed',      w:5,   h:4,   d:6.5, color:'#8a7a7a', style:'bed' },
+  dresser:        { name:'Dresser',        w:4,   h:3,   d:1.5, color:'#9a8878', style:'dresser' },
+  wardrobe:       { name:'Wardrobe',       w:5,   h:7,   d:2,   color:'#8a8878', style:'wardrobe' },
+  bookshelf:      { name:'Bookshelf',      w:3,   h:6,   d:1,   color:'#7a6858', style:'shelf' },
+  tvstand:        { name:'TV Stand',       w:5,   h:2,   d:1.5, color:'#4a4a4a', style:'tvstand' },
+  kitchen_counter:{ name:'Counter',        w:6,   h:3,   d:2,   color:'#c0b8a8', style:'counter' },
+  kitchen_island: { name:'Island',         w:4,   h:3,   d:2.5, color:'#b0a898', style:'counter' },
+  bathtub:        { name:'Bathtub',        w:5,   h:2,   d:2.5, color:'#e0ddd8', style:'tub' },
+  toilet:         { name:'Toilet',         w:1.5, h:2.5, d:2.5, color:'#e8e5e0', style:'toilet' },
+  sink:           { name:'Sink',           w:2,   h:2.5, d:1.5, color:'#e0ddd8', style:'sink' },
+  shower:         { name:'Shower',         w:3,   h:7,   d:3,   color:'#c8d4d8', style:'shower' },
+  plant:          { name:'Plant',          w:1.5, h:4,   d:1.5, color:'#4a8a4a', style:'plant' },
+  rug:            { name:'Area Rug',       w:6,   h:0.1, d:4,   color:'#9a7060', style:'rug' },
+  lamp:           { name:'Floor Lamp',     w:1,   h:5,   d:1,   color:'#c8b870', style:'lamp' },
+  fireplace:      { name:'Fireplace',      w:4,   h:4,   d:1.5, color:'#6a6060', style:'fireplace' },
+  window:         { name:'Window',         w:3,   h:4,   d:0.3, color:'#a8c8d8', style:'window' },
+  door:           { name:'Door',           w:3,   h:7,   d:0.2, color:'#c8a870', style:'door' },
+};
+
+const ITEM_COLORS  = ['#7a8fa6','#9a8878','#4a8a4a','#c8b870','#8a6a6a','#6a8a8a','#a8a0a0','#7a6858','#4a4a4a','#c0b8a8'];
+const WALL_COLORS  = ['#d8ccbe','#e8dfd4','#c8d8d0','#d4ccd8','#d8d0c4','#c8c8c8','#e0d4c0','#d0d8c8','#f5f0e8','#2a2a2a'];
+const FLOOR_COLORS = ['#b8a882','#8a7060','#c8c0b0','#6a5a4a','#d4c8a8','#7a8878','#a89880','#c0a880','#4a4440','#d8d0c0'];
+const CEIL_COLORS  = ['#f0ebe3','#ffffff','#f8f4ee','#e8e0d0','#f0f0f0','#f5f0e0','#e0dcd4','#faf8f4','#2a2a2a','#e8e0c8'];
+
+// ─── Three.js Setup ────────────────────────────────────────────────────────
+let scene3d, camera, renderer;
+let furnitureMeshes = {}, roomGroup;
+let scanGroup = null;
+let raycaster, mouse;
+let isDragging = false, mouseDownPos = {x:0,y:0};
+let orbitState = { theta: 0.5, phi: 0.9, radius: 28, target: new THREE.Vector3() };
+let lastMouse = {x:0,y:0};
+let dragItem = null;
+
+function initThree() {
+  const canvas = document.getElementById('mainCanvas');
+  scene3d = new THREE.Scene();
+  scene3d.background = new THREE.Color(0x151210);
+  scene3d.fog = new THREE.Fog(0x151210, 50, 100);
+
+  const rect = getCanvasRect();
+  camera = new THREE.PerspectiveCamera(50, rect.w / rect.h, 0.1, 300);
+  updateCameraPosition();
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  resizeRenderer();
+
+  const ambient = new THREE.AmbientLight(0xfff8f0, state.lightIntensity);
+  ambient.name = 'ambient';
+  scene3d.add(ambient);
+
+  const sun = new THREE.DirectionalLight(0xfff5e0, 0.9);
+  sun.position.set(12, 24, 12);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048,2048);
+  sun.name = 'sun';
+  scene3d.add(sun);
+
+  const fill = new THREE.DirectionalLight(0xe0f0ff, 0.25);
+  fill.position.set(-8, 12, -8);
+  scene3d.add(fill);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  setupEvents();
+  animate();
+}
+
+function getCanvasRect() {
+  const ca = document.getElementById('mainCanvas');
+  const parent = ca.parentElement;
+  const rect = parent.getBoundingClientRect();
+  const tbH = document.querySelector('.view-toolbar').offsetHeight || 36;
+  const sbH = document.querySelector('.status-bar').offsetHeight || 28;
+  return { w: rect.width, h: rect.height - tbH - sbH };
+}
+
+function resizeRenderer() {
+  const { w, h } = getCanvasRect();
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+function updateCameraPosition() {
+  const { theta, phi, radius, target } = orbitState;
+  camera.position.set(
+    target.x + radius * Math.sin(phi) * Math.sin(theta),
+    target.y + radius * Math.cos(phi),
+    target.z + radius * Math.sin(phi) * Math.cos(theta)
+  );
+  camera.lookAt(target);
+}
+
+// ─── Polycam GLB Import ───────────────────────────────────────────────────
+function loadGLB(file) {
+  if (!file) {
+    alert('DEBUG: No file received by loadGLB');
+    return;
+  }
+  alert('DEBUG: Got file → ' + file.name + ' (' + Math.round(file.size/1024) + ' KB) type=' + file.type);
+  const name = file.name.toLowerCase();
+  showLoading('Loading ' + file.name + '…');
+
+  if (name.endsWith('.zip')) {
+    loadZip(file);
+  } else if (name.endsWith('.glb')) {
+    loadArrayBuffer(file, null, file.name);
+  } else if (name.endsWith('.gltf')) {
+    // Read as text first — if it references an external .bin we need special handling
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        const externalBin = json.buffers && json.buffers[0] && json.buffers[0].uri
+                         && !json.buffers[0].uri.startsWith('data:')
+                         ? json.buffers[0].uri : null;
+        if (externalBin) {
+          hideLoading();
+          document.getElementById('loadingOverlay').classList.remove('active');
+          alert('This GLTF references an external file "' + externalBin + '".
+
+Please select the .bin file too, or export from Polycam again and choose "Export" on the web (poly.cam) which gives a self-contained file.
+
+Alternatively, zip the .gltf and .bin files together and import the zip.');
+        } else {
+          // Self-contained GLTF (buffers embedded as base64)
+          parseGLTFJson(json, file.name);
+        }
+      } catch(err) {
+        hideLoading();
+        alert('Could not read file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  } else {
+    hideLoading();
+    alert('Unsupported file type. Please use a .gltf, .glb, or .zip file exported from Polycam.');
+  }
+}
+
+function loadArrayBuffer(file, extraFiles, filename) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const loader = new GLTFLoader();
+    if (extraFiles) loader._extraFiles = extraFiles;
+    loader.parse(e.target.result, '', (gltf) => {
+      hideLoading();
+      installScan(gltf.scene, filename);
+    }, (err) => {
+      hideLoading();
+      alert('Could not parse file: ' + (err.message || err) + '
+
+Try re-exporting from Polycam.');
+      console.error(err);
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseGLTFJson(json, filename) {
+  const loader = new GLTFLoader();
+  loader.parseJSON(json, (gltf) => {
+    hideLoading();
+    installScan(gltf.scene, filename);
+  }, (err) => {
+    hideLoading();
+    alert('Could not parse GLTF: ' + (err.message || err));
+    console.error(err);
+  });
+}
+
+async function loadZip(file) {
+  try {
+    showLoading('Loading JSZip library…');
+    const JSZip = await loadJSZip();
+
+    showLoading('Unpacking zip…');
+    const zip = await JSZip.loadAsync(file);
+
+    // List ALL entries for debugging
+    const allEntries = Object.keys(zip.files);
+    console.log('Zip contents:', allEntries);
+
+    // Build flat file map (keep full path as key AND basename as key)
+    const files = {};
+    for (const [path, entry] of Object.entries(zip.files)) {
+      if (!entry.dir) {
+        files[path] = entry;
+        files[path.split('/').pop()] = entry;
+      }
+    }
+
+    const fileNames = Object.keys(files);
+    const glbEntry  = Object.entries(files).find(([n]) => n.toLowerCase().endsWith('.glb'));
+    const gltfEntry = Object.entries(files).find(([n]) => n.toLowerCase().endsWith('.gltf'));
+
+    console.log('GLB found:', glbEntry ? glbEntry[0] : 'none');
+    console.log('GLTF found:', gltfEntry ? gltfEntry[0] : 'none');
+
+    if (!glbEntry && !gltfEntry) {
+      hideLoading();
+      alert('Could not find a .gltf or .glb file inside the zip.
+
+Files found in zip:
+' + allEntries.join('
+'));
+      return;
+    }
+
+    if (glbEntry) {
+      showLoading('Loading GLB…');
+      const buf = await glbEntry[1].async('arraybuffer');
+      const loader = new GLTFLoader();
+      loader.parse(buf, '', (gltf) => {
+        hideLoading();
+        installScan(gltf.scene, file.name);
+      }, (err) => {
+        hideLoading();
+        alert('GLB parse error: ' + (err.message || err) + '
+
+Check browser console for details.');
+        console.error(err);
+      });
+      return;
+    }
+
+    // GLTF path
+    showLoading('Loading GLTF…');
+    const text = await gltfEntry[1].async('text');
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch(e) {
+      hideLoading();
+      alert('The .gltf file is not valid JSON: ' + e.message);
+      return;
+    }
+
+    // Inline any external .bin buffers
+    if (json.buffers) {
+      for (let i = 0; i < json.buffers.length; i++) {
+        const uri = json.buffers[i].uri;
+        if (uri && !uri.startsWith('data:')) {
+          const binName = uri.split('/').pop();
+          const binEntry = files[binName] || files[uri];
+          console.log('Looking for bin:', binName, '→', binEntry ? 'found' : 'NOT FOUND');
+          if (binEntry) {
+            showLoading('Loading binary data…');
+            const binBuf = await binEntry.async('arraybuffer');
+            // Use chunked btoa to avoid call stack overflow on large files
+            const bytes = new Uint8Array(binBuf);
+            let b64 = '';
+            const chunk = 8192;
+            for (let j = 0; j < bytes.length; j += chunk) {
+              b64 += btoa(String.fromCharCode(...bytes.subarray(j, j + chunk)));
+            }
+            json.buffers[i].uri = 'data:application/octet-stream;base64,' + b64;
+          } else {
+            hideLoading();
+            alert('Could not find "' + binName + '" inside the zip.
+
+Files in zip:
+' + allEntries.join('
+'));
+            return;
+          }
+        }
+      }
+    }
+
+    showLoading('Building 3D scene…');
+    parseGLTFJson(json, file.name);
+
+  } catch(err) {
+    hideLoading();
+    alert('Error loading zip: ' + err.message + '
+
+Check browser console for details.');
+    console.error('loadZip error:', err);
+  }
+}
+
+// ─── Minimal ZIP reader (no dependencies) ────────────────────────────────
+// Uses browser-native DecompressionStream for inflate. Supported in all
+// modern browsers (Chrome 80+, Firefox 113+, Safari 16.4+, Edge 80+).
+const NanoZip = {
+  async loadAsync(file) {
+    const buf = await file.arrayBuffer();
+    const view = new DataView(buf);
+    const bytes = new Uint8Array(buf);
+    const entries = {};
+
+    // Walk the local file headers (signature 0x04034b50)
+    let i = 0;
+    while (i < bytes.length - 4) {
+      const sig = view.getUint32(i, true);
+      if (sig !== 0x04034b50) { i++; continue; }
+
+      const compression   = view.getUint16(i + 8,  true); // 0=store, 8=deflate
+      const compSize      = view.getUint32(i + 18, true);
+      const uncompSize    = view.getUint32(i + 22, true);
+      const fileNameLen   = view.getUint16(i + 26, true);
+      const extraLen      = view.getUint16(i + 28, true);
+      const fileNameBytes = bytes.slice(i + 30, i + 30 + fileNameLen);
+      const fileName      = new TextDecoder().decode(fileNameBytes);
+      const dataStart     = i + 30 + fileNameLen + extraLen;
+      const compData      = bytes.slice(dataStart, dataStart + compSize);
+
+      if (fileName && !fileName.endsWith('/')) {
+        entries[fileName] = { compression, compData, uncompSize };
+      }
+      i = dataStart + compSize;
+    }
+
+    // Return JSZip-compatible object
+    const files = {};
+    for (const [name, entry] of Object.entries(entries)) {
+      files[name] = {
+        dir: false,
+        async async(type) {
+          let data;
+          if (entry.compression === 0) {
+            // Stored — no compression
+            data = entry.compData;
+          } else if (entry.compression === 8) {
+            // Deflate — use DecompressionStream
+            data = await NanoZip._inflate(entry.compData);
+          } else {
+            throw new Error('Unsupported compression method: ' + entry.compression);
+          }
+          if (type === 'arraybuffer') return data.buffer;
+          if (type === 'text') return new TextDecoder().decode(data);
+          if (type === 'uint8array') return data;
+          throw new Error('Unknown type: ' + type);
+        }
+      };
+    }
+    return { files };
+  },
+
+  async _inflate(compData) {
+    // DecompressionStream expects raw deflate — add zlib wrapper
+    // Actually use 'deflate-raw' if available, fall back to 'deflate' with wrapper
+    const streams = ['deflate-raw', 'deflate'];
+    for (const fmt of streams) {
+      try {
+        const ds = new DecompressionStream(fmt);
+        const writer = ds.writable.getWriter();
+        const reader = ds.readable.getReader();
+        writer.write(fmt === 'deflate' ? NanoZip._addZlibWrapper(compData) : compData);
+        writer.close();
+        const chunks = [];
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+        }
+        const total = chunks.reduce((s, c) => s + c.length, 0);
+        const out = new Uint8Array(total);
+        let off = 0;
+        for (const c of chunks) { out.set(c, off); off += c.length; }
+        return out;
+      } catch(e) {
+        if (fmt === streams[streams.length - 1]) throw e;
+      }
+    }
+  },
+
+  _addZlibWrapper(data) {
+    const out = new Uint8Array(data.length + 6);
+    out[0] = 0x78; out[1] = 0x9C; // zlib header
+    out.set(data, 2);
+    // adler32 checksum
+    let s1 = 1, s2 = 0;
+    for (const b of data) { s1 = (s1 + b) % 65521; s2 = (s2 + s1) % 65521; }
+    const adler = (s2 << 16) | s1;
+    const view = new DataView(out.buffer);
+    view.setUint32(out.length - 4, adler, false);
+    return out;
+  }
+};
+
+function loadJSZip() {
+  return Promise.resolve(NanoZip);
+}
+
+function installScan(scanScene, filename) {
+  // Wipe slate: clear any preset furniture and old scan
+  state.furniture.forEach(item => { const m = furnitureMeshes[item.id]; if (m) scene3d.remove(m); });
+  state.furniture = []; furnitureMeshes = {}; state.selectedId = null;
+  document.getElementById('propPanel').style.display = 'none';
+  updateItemCount();
+  if (scanGroup) { scene3d.remove(scanGroup); scanGroup = null; }
+
+  scanGroup = new THREE.Group();
+  scanGroup.name = 'polycam_scan';
+  scanGroup.add(scanScene);
+
+  // ── Auto-scale & center ──
+  // Polycam Floorplan always exports in METERS. Convert to feet (1m = 3.28084ft).
+  const box = new THREE.Box3().setFromObject(scanGroup);
+  const size = box.getSize(new THREE.Vector3());
+
+  // Heuristic: a typical room is 3–12m. If raw units look like meters → convert.
+  // If already huge (>50) it may be cm → divide by 30.48. If tiny (<0.5) multiply more.
+  const maxDim = Math.max(size.x, size.z); // use floor footprint, not height
+  let scaleFactor;
+  if (maxDim > 50) {
+    scaleFactor = 3.28084 / 100; // cm → feet
+  } else if (maxDim < 0.5) {
+    scaleFactor = 3.28084 * 100; // very tiny → feet
+  } else {
+    scaleFactor = 3.28084; // meters → feet (the normal Polycam case)
+  }
+
+  state.rawScanScale = scaleFactor; // save so user can re-scale
+  scanGroup.scale.setScalar(scaleFactor);
+
+  // Recompute after scale
+  const box2 = new THREE.Box3().setFromObject(scanGroup);
+  const size2 = box2.getSize(new THREE.Vector3());
+  const center2 = box2.getCenter(new THREE.Vector3());
+
+  // Sit on floor (y=0)
+  scanGroup.position.y = -box2.min.y;
+  // Center X/Z
+  scanGroup.position.x = -center2.x;
+  scanGroup.position.z = -center2.z;
+
+  // Apply opacity
+  scanGroup.traverse(obj => {
+    if (obj.isMesh) {
+      obj.material = obj.material.clone();
+      obj.material.transparent = true;
+      obj.material.opacity = state.scanOpacity;
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+    }
+  });
+
+  scene3d.add(scanGroup);
+
+  // Add a simple floor grid sized to the scan (no room box walls)
+  if (roomGroup) { scene3d.remove(roomGroup); roomGroup = null; }
+  roomGroup = new THREE.Group();
+  const gridSize = Math.max(size2.x, size2.z) + 6;
+  const grid = new THREE.GridHelper(gridSize, Math.ceil(gridSize) * 2, 0x252015, 0x252015);
+  grid.position.y = 0.01;
+  roomGroup.add(grid);
+  scene3d.add(roomGroup);
+
+  // ── Extract room dims ──
+  const dimW = parseFloat(size2.x.toFixed(1));
+  const dimH = parseFloat(size2.y.toFixed(1));
+  const dimD = parseFloat(size2.z.toFixed(1));
+
+  state.scanDims = { w: dimW, h: dimH, d: dimD };
+  state.scanLoaded = true;
+
+  // Update room box to match scan
+  state.room.w = Math.max(6, Math.round(dimW));
+  state.room.d = Math.max(6, Math.round(dimD));
+  state.room.h = Math.max(7, Math.round(dimH * 10) / 10);
+
+  document.getElementById('roomW').value = state.room.w;
+  document.getElementById('roomD').value = state.room.d;
+  document.getElementById('roomH').value = state.room.h;
+  document.getElementById('roomWVal').textContent = state.room.w + ' ft';
+  document.getElementById('roomDVal').textContent = state.room.d + ' ft';
+  document.getElementById('roomHVal').textContent = state.room.h + ' ft';
+
+  // Show measured dims card
+  document.getElementById('sdW').textContent = dimW + ' ft';
+  document.getElementById('sdD').textContent = dimD + ' ft';
+  document.getElementById('sdH').textContent = dimH + ' ft';
+  document.getElementById('scannedDims').style.display = 'block';
+  document.getElementById('calibRow').style.display = 'flex';
+  document.getElementById('calibHint').style.display = 'block';
+  document.getElementById('calibSlider').value = 1.0;
+  document.getElementById('calibVal').textContent = '1.00×';
+
+  // Camera orbit radius = diagonal / 1.5
+  const diag = Math.sqrt(dimW*dimW + dimD*dimD);
+  orbitState.radius = diag * 1.6;
+  orbitState.target.set(0, dimH / 2, 0);
+  updateCameraPosition();
+
+  // Update UI
+  const statusEl = document.getElementById('scanStatus');
+  statusEl.classList.add('loaded');
+  document.getElementById('scanStatusText').textContent = filename.replace('.glb','').replace('.gltf','');
+  document.getElementById('scanControls').classList.add('visible');
+  document.getElementById('scanOpacityInline').style.display = 'flex';
+  document.getElementById('scanInfo').textContent = `Scan: ${dimW}×${dimD}×${dimH} ft`;
+
+  updateRoomInfo();
+}
+
+function toggleScanVisible() {
+  if (!scanGroup) return;
+  state.scanVisible = !state.scanVisible;
+  scanGroup.visible = state.scanVisible;
+  document.getElementById('scanVisBtn').textContent = state.scanVisible ? '👁 Hide Scan' : '👁 Show Scan';
+}
+
+function removeScan() {
+  if (scanGroup) { scene3d.remove(scanGroup); scanGroup = null; }
+  state.scanLoaded = false;
+  state.scanDims = null;
+  document.getElementById('scanStatus').classList.remove('loaded');
+  document.getElementById('scanStatusText').textContent = 'No scan loaded';
+  document.getElementById('scanControls').classList.remove('visible');
+  document.getElementById('scannedDims').style.display = 'none';
+  document.getElementById('scanOpacityInline').style.display = 'none';
+  document.getElementById('scanInfo').textContent = 'No scan loaded';
+}
+
+function updateScanOpacity() {
+  const v = parseFloat(document.getElementById('scanOpacity').value);
+  document.getElementById('scanOpacityVal').textContent = v.toFixed(2);
+  document.getElementById('scanOpInline').value = v;
+  applyScanOpacity(v);
+}
+
+function updateScanOpacityInline(v) {
+  v = parseFloat(v);
+  document.getElementById('scanOpacity').value = v;
+  document.getElementById('scanOpacityVal').textContent = v.toFixed(2);
+  applyScanOpacity(v);
+}
+
+function applyScanOpacity(v) {
+  state.scanOpacity = v;
+  if (!scanGroup) return;
+  scanGroup.traverse(obj => {
+    if (obj.isMesh && obj.material) obj.material.opacity = v;
+  });
+}
+
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// ─── Drag-and-drop on whole window ───────────────────────────────────────
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && (file.name.endsWith('.gltf') || file.name.endsWith('.glb') || file.name.endsWith('.zip'))) loadGLB(file);
+});
+
+// ─── Room Building ────────────────────────────────────────────────────────
+function buildRoom() {
+  if (roomGroup) scene3d.remove(roomGroup);
+  roomGroup = new THREE.Group();
+
+  const { w, d, h } = state.room;
+  const wallMat  = new THREE.MeshLambertMaterial({ color: state.wallColor, side: THREE.BackSide });
+  const floorMat = new THREE.MeshLambertMaterial({ color: state.floorColor });
+  const ceilMat  = new THREE.MeshLambertMaterial({ color: state.ceilingColor });
+
+  // Floor
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floorMat);
+  floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; floor.name = 'floor';
+  roomGroup.add(floor);
+
+  // Ceiling
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), ceilMat);
+  ceil.rotation.x = Math.PI/2; ceil.position.y = h;
+  roomGroup.add(ceil);
+
+  // Walls
+  const box = new THREE.Mesh(new THREE.BoxGeometry(w+0.3, h, d+0.3), wallMat);
+  box.position.y = h/2; box.receiveShadow = true;
+  roomGroup.add(box);
+
+  // Grid
+  const grid = new THREE.GridHelper(Math.max(w,d)+6, Math.max(w,d)*2+6, 0x252015, 0x252015);
+  grid.position.y = 0.01;
+  roomGroup.add(grid);
+
+  orbitState.target.set(0, h/2, 0);
+  scene3d.add(roomGroup);
+  updateRoomInfo();
+}
+
+// ─── Furniture Mesh Creation ──────────────────────────────────────────────
+function addFurniture(type) {
+  const def = FURNITURE_DEFS[type];
+  if (!def) return;
+  const item = { id: state.nextId++, type, name: def.name, x:0, z:0, rotation:0, color: def.color, w:def.w, h:def.h, d:def.d, style:def.style };
+  state.furniture.push(item);
+  createFurnitureMesh(item);
+  selectItem(item.id);
+  updateItemCount();
+}
+
+function createFurnitureMesh(item) {
+  const g = new THREE.Group();
+  g.userData.itemId = item.id;
+  const mat  = new THREE.MeshLambertMaterial({ color: item.color });
+  const dark = new THREE.MeshLambertMaterial({ color: darken(item.color, 0.7) });
+  const lite = new THREE.MeshLambertMaterial({ color: lighten(item.color, 1.3) });
+  const { w, h, d, style } = item;
+
+  switch(style) {
+    case 'sofa':
+      box(g,w,h*0.4,d*0.7,0,h*0.2,0,mat);
+      box(g,w,h*0.8,d*0.2,0,h*0.4,-d*0.25,dark);
+      box(g,0.3,h*0.5,d*0.7,-w/2+0.15,h*0.25,0,dark);
+      box(g,0.3,h*0.5,d*0.7,w/2-0.15,h*0.25,0,dark);
+      [-1,0,1].forEach(i=>box(g,w/3-0.1,h*0.35,d*0.55,i*(w/3),h*0.55,d*0.07,lite));
+      break;
+    case 'chair':
+      box(g,w*0.85,h*0.35,d*0.85,0,h*0.2,0,mat);
+      box(g,w*0.85,h*0.8,d*0.15,0,h*0.5,-d*0.35,dark);
+      box(g,0.2,h*0.5,d*0.85,-w*0.32,h*0.3,0,dark);
+      box(g,0.2,h*0.5,d*0.85,w*0.32,h*0.3,0,dark);
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>box(g,0.1,h*0.2,0.1,a*(w*0.35),h*0.1,b*(d*0.35),dark));
+      break;
+    case 'table': case 'tvstand':
+      box(g,w,h*0.1,d,0,h*0.95,0,mat);
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>box(g,0.1,h*0.9,0.1,a*(w*0.44),h*0.45,b*(d*0.44),dark));
+      break;
+    case 'bed':
+      box(g,w,h*0.25,d,0,h*0.12,0,dark);
+      box(g,w*0.9,h*0.2,d*0.75,0,h*0.35,d*0.08,mat);
+      box(g,w*0.8,h*0.12,d*0.12,0,h*0.48,-d*0.37,lite);
+      box(g,w,h*0.9,0.2,0,h*0.5,-d*0.48,dark);
+      box(g,w,h*0.35,0.15,0,h*0.22,d*0.48,dark);
+      break;
+    case 'dresser': case 'wardrobe':
+      box(g,w,h,d,0,h/2,0,mat);
+      for(let r=0;r<(style==='wardrobe'?2:3);r++) for(let c=0;c<2;c++)
+        box(g,w/2-0.15,h/(style==='wardrobe'?2:3)-0.15,0.05,(c-0.5)*(w/2),(r+0.5)*(h/(style==='wardrobe'?2:3))-h/2+0.08,d/2+0.02,lite);
+      break;
+    case 'shelf':
+      box(g,0.08,h,d,-w/2,h/2,0,dark); box(g,0.08,h,d,w/2,h/2,0,dark); box(g,w,0.08,d,0,0,0,dark);
+      for(let i=1;i<=4;i++) box(g,w,0.08,d,0,i*(h/4),0,dark);
+      break;
+    case 'counter':
+      box(g,w,h*0.85,d,0,h*0.42,0,mat);
+      box(g,w+0.1,h*0.08,d+0.1,0,h*0.88,0,lite);
+      break;
+    case 'tub':
+      box(g,w,h,d,0,h/2,0,mat);
+      box(g,w*0.8,h*0.8,d*0.82,0,h*0.55,0,new THREE.MeshLambertMaterial({color:'#f8f5f0'}));
+      break;
+    case 'toilet':
+      box(g,w,h*0.35,d*0.6,0,h*0.17,-d*0.1,mat);
+      box(g,w*0.8,h*0.12,d*0.25,0,h*0.38,d*0.3,mat);
+      box(g,w*0.7,h*0.55,d*0.15,0,h*0.47,-d*0.42,dark);
+      break;
+    case 'sink':
+      box(g,w,h,d*0.3,0,h/2,-d*0.35,dark);
+      box(g,w*0.85,h*0.12,d*0.8,0,h*0.9,0,mat);
+      break;
+    case 'shower':
+      const gm=new THREE.MeshLambertMaterial({color:'#a0c0d0',transparent:true,opacity:0.35});
+      box(g,w,h,0.1,-w/2,h/2,0,gm); box(g,0.1,h,d,0,h/2,-d/2,gm); box(g,w,0.1,d,0,0,0,mat);
+      break;
+    case 'plant':
+      box(g,w*0.7,h*0.3,d*0.7,0,h*0.15,0,new THREE.MeshLambertMaterial({color:'#8a6848'}));
+      const sp1=new THREE.Mesh(new THREE.SphereGeometry(w*0.55,8,8),mat); sp1.position.set(0,h*0.7,0); sp1.scale.y=1.4; g.add(sp1);
+      const sp2=new THREE.Mesh(new THREE.SphereGeometry(w*0.35,8,8),dark); sp2.position.set(w*0.3,h*0.6,0); g.add(sp2);
+      break;
+    case 'rug':
+      box(g,w,0.05,d,0,0.025,0,mat);
+      box(g,w*0.85,0.06,d*0.85,0,0.03,0,lite);
+      break;
+    case 'lamp':
+      box(g,0.15,h*0.85,0.15,0,h*0.42,0,dark); box(g,w*0.8,0.05,d*0.8,0,0,0,dark);
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(0.5,0.6,8,1,true),mat); cone.position.y=h*0.87; g.add(cone);
+      const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.12,8,8),new THREE.MeshLambertMaterial({color:'#ffffc0',emissive:'#ffffa0',emissiveIntensity:0.5})); bulb.position.y=h*0.82; g.add(bulb);
+      break;
+    case 'fireplace':
+      box(g,w,h,d,0,h/2,0,mat);
+      box(g,w*0.65,h*0.55,0.1,0,h*0.32,d/2+0.01,new THREE.MeshLambertMaterial({color:'#1a1a1a'}));
+      box(g,w*0.5,h*0.2,0.08,0,h*0.2,d/2+0.02,new THREE.MeshLambertMaterial({color:'#e06020',emissive:'#d04010',emissiveIntensity:0.8}));
+      break;
+    case 'window':
+      box(g,w,h,d,0,h/2,0,new THREE.MeshLambertMaterial({color:'#f0ece4'}));
+      box(g,w*0.85,h*0.85,d*0.4,0,h/2,0,new THREE.MeshLambertMaterial({color:'#a8d0e8',transparent:true,opacity:0.6}));
+      break;
+    case 'door':
+      box(g,w,h,d,0,h/2,0,mat); box(g,w*0.92,h*0.96,d*0.5,0,h/2,0,lite);
+      break;
+    case 'stool':
+      box(g,w,h*0.08,d,0,h*0.95,0,mat);
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>box(g,0.1,h*0.9,0.1,a*(w*0.38),h*0.45,b*(d*0.38),dark));
+      break;
+    case 'bench':
+      box(g,w,h*0.15,d,0,h*0.87,0,mat);
+      [[-1,1],[1,1],[-1,-1],[1,-1]].forEach(([a,b])=>box(g,0.1,h*0.85,0.1,a*(w*0.44),h*0.42,b*(d*0.38),dark));
+      break;
+    default:
+      box(g,w,h,d,0,h/2,0,mat);
+  }
+
+  g.position.set(item.x,0,item.z);
+  g.rotation.y = item.rotation * Math.PI/180;
+  g.castShadow = true;
+  scene3d.add(g);
+  furnitureMeshes[item.id] = g;
+}
+
+function box(parent, w, h, d, x, y, z, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+function darken(hex, f) { const c=new THREE.Color(hex); return `rgb(${~~(c.r*255*f)},${~~(c.g*255*f)},${~~(c.b*255*f)})`; }
+function lighten(hex, f) { const c=new THREE.Color(hex); return `rgb(${Math.min(255,~~(c.r*255*f))},${Math.min(255,~~(c.g*255*f))},${Math.min(255,~~(c.b*255*f))})`; }
+
+// ─── Events ───────────────────────────────────────────────────────────────
+function setupEvents() {
+  const c = document.getElementById('mainCanvas');
+  c.addEventListener('mousedown', onDown);
+  c.addEventListener('mousemove', onMove);
+  c.addEventListener('mouseup', onUp);
+  c.addEventListener('wheel', e => { e.preventDefault(); orbitState.radius = Math.max(4, Math.min(80, orbitState.radius + e.deltaY*0.06)); updateCameraPosition(); }, {passive:false});
+  c.addEventListener('touchstart', e => { onDown(t2m(e)); e.preventDefault(); }, {passive:false});
+  c.addEventListener('touchmove',  e => { onMove(t2m(e)); e.preventDefault(); }, {passive:false});
+  c.addEventListener('touchend',   e => { onUp(t2m(e)); }, {passive:false});
+}
+function t2m(e) { const t=e.touches[0]||e.changedTouches[0]; return {clientX:t.clientX,clientY:t.clientY,button:0}; }
+
+function onDown(e) {
+  lastMouse = {x:e.clientX,y:e.clientY};
+  mouseDownPos = {x:e.clientX,y:e.clientY};
+  isDragging = true;
+  if (e.button===0) { const hit = raycast(e); if(hit){ selectItem(hit.id); dragItem=hit; } }
+}
+function onMove(e) {
+  if (!isDragging) return;
+  const dx=e.clientX-lastMouse.x, dy=e.clientY-lastMouse.y;
+  lastMouse={x:e.clientX,y:e.clientY};
+  const moved=Math.abs(e.clientX-mouseDownPos.x)+Math.abs(e.clientY-mouseDownPos.y)>5;
+  if (dragItem && moved) {
+    const spd=orbitState.radius*0.003, th=orbitState.theta;
+    dragItem.x += (Math.cos(th)*-dx - Math.sin(th)*-dy)*spd*0.5;
+    dragItem.z += (Math.sin(th)*-dx + Math.cos(th)*-dy)*spd*0.5;
+    const {w,d}=state.room;
+    dragItem.x=Math.max(-w/2+dragItem.w/2,Math.min(w/2-dragItem.w/2,dragItem.x));
+    dragItem.z=Math.max(-d/2+dragItem.d/2,Math.min(d/2-dragItem.d/2,dragItem.z));
+    const m=furnitureMeshes[dragItem.id]; if(m) m.position.set(dragItem.x,0,dragItem.z);
+  } else if (!dragItem) {
+    orbitState.theta -= dx*0.01;
+    orbitState.phi = Math.max(0.12, Math.min(Math.PI*0.46, orbitState.phi-dy*0.008));
+    updateCameraPosition();
+  }
+}
+function onUp(e) {
+  isDragging=false;
+  const moved=Math.abs(e.clientX-mouseDownPos.x)+Math.abs(e.clientY-mouseDownPos.y)>5;
+  if(!moved&&!dragItem){ const hit=raycast(e); if(!hit) deselectAll(); }
+  dragItem=null;
+}
+
+function raycast(e) {
+  const c=document.getElementById('mainCanvas'); const r=c.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1;
+  mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(mouse, camera);
+  const all=[]; Object.values(furnitureMeshes).forEach(g=>g.traverse(o=>{if(o.isMesh)all.push(o);}));
+  const hits=raycaster.intersectObjects(all);
+  if(hits.length>0){ let o=hits[0].object; while(o.parent&&!o.userData.itemId)o=o.parent; return state.furniture.find(f=>f.id===o.userData.itemId)||null; }
+  return null;
+}
+
+function selectItem(id) {
+  state.selectedId = id;
+  const item=state.furniture.find(f=>f.id===id); if(!item)return;
+  document.getElementById('propPanel').style.display='block';
+  document.getElementById('propTitle').textContent=item.name;
+  document.getElementById('rotSlider').value=item.rotation;
+  document.getElementById('rotVal').textContent=item.rotation+'°';
+  document.getElementById('dimW').value=item.w;
+  document.getElementById('dimD').value=item.d;
+  document.getElementById('dimH').value=item.h;
+  renderSwatches('itemSwatches', ITEM_COLORS, item.color, c=>{ item.color=c; rebuildMesh(item); });
+  Object.entries(furnitureMeshes).forEach(([mid,mesh])=>{
+    mesh.traverse(o=>{ if(o.isMesh&&o.material){ o.material.emissive=new THREE.Color(parseInt(mid)===id?0x1a1400:0x000000); o.material.emissiveIntensity=parseInt(mid)===id?0.3:0; } });
+  });
+  document.getElementById('selectedInfo').textContent='Selected: '+item.name;
+}
+function deselectAll() {
+  state.selectedId=null;
+  document.getElementById('propPanel').style.display='none';
+  Object.values(furnitureMeshes).forEach(m=>m.traverse(o=>{if(o.isMesh&&o.material){o.material.emissive=new THREE.Color(0);o.material.emissiveIntensity=0;}}));
+  document.getElementById('selectedInfo').textContent='Click furniture to select & drag';
+}
+function rebuildMesh(item) { const o=furnitureMeshes[item.id]; if(o)scene3d.remove(o); createFurnitureMesh(item); selectItem(item.id); }
+function rotateSelected() {
+  const v=parseInt(document.getElementById('rotSlider').value);
+  document.getElementById('rotVal').textContent=v+'°';
+  if(!state.selectedId)return;
+  const item=state.furniture.find(f=>f.id===state.selectedId); if(!item)return;
+  item.rotation=v;
+  const m=furnitureMeshes[item.id]; if(m)m.rotation.y=v*Math.PI/180;
+}
+
+function resizeSelected() {
+  if(!state.selectedId) return;
+  const item = state.furniture.find(f=>f.id===state.selectedId); if(!item) return;
+  const w = parseFloat(document.getElementById('dimW').value);
+  const d = parseFloat(document.getElementById('dimD').value);
+  const h = parseFloat(document.getElementById('dimH').value);
+  if(!w||!d||!h||w<=0||d<=0||h<=0) return;
+  item.w=w; item.d=d; item.h=h;
+  rebuildMesh(item);
+}
+
+function addCustomObject() {
+  const name = document.getElementById('customName').value.trim() || 'Custom';
+  const w = parseFloat(document.getElementById('customW').value) || 4;
+  const d = parseFloat(document.getElementById('customD').value) || 3;
+  const h = parseFloat(document.getElementById('customH').value) || 3;
+  const item = {
+    id: state.nextId++,
+    type: 'custom',
+    name,
+    x: 0, z: 0,
+    rotation: 0,
+    color: '#8a8a9a',
+    w, h, d,
+    style: 'default'
+  };
+  state.furniture.push(item);
+  createFurnitureMesh(item);
+  selectItem(item.id);
+  updateItemCount();
+}
+function deleteSelected() {
+  if(!state.selectedId)return;
+  const m=furnitureMeshes[state.selectedId]; if(m)scene3d.remove(m);
+  delete furnitureMeshes[state.selectedId];
+  state.furniture=state.furniture.filter(f=>f.id!==state.selectedId);
+  state.selectedId=null;
+  document.getElementById('propPanel').style.display='none';
+  updateItemCount();
+  document.getElementById('selectedInfo').textContent='Click furniture to select & drag';
+}
+
+// ─── Room update ──────────────────────────────────────────────────────────
+function updateRoom() {
+  state.room.w=parseFloat(document.getElementById('roomW').value);
+  state.room.d=parseFloat(document.getElementById('roomD').value);
+  state.room.h=parseFloat(document.getElementById('roomH').value);
+  document.getElementById('roomWVal').textContent=state.room.w+' ft';
+  document.getElementById('roomDVal').textContent=state.room.d+' ft';
+  document.getElementById('roomHVal').textContent=state.room.h+' ft';
+  buildRoom(); updateRoomInfo();
+  if(state.viewMode==='top') drawFloorPlan();
+}
+function updateRoomInfo() { const{w,d,h}=state.room; document.getElementById('roomInfo').textContent=`Room: ${w}×${d}×${h} ft`; }
+function updateItemCount() { document.getElementById('itemCount').textContent='Furniture: '+state.furniture.length; }
+
+function resetRoom() {
+  state.furniture.forEach(item=>{ const m=furnitureMeshes[item.id]; if(m)scene3d.remove(m); });
+  state.furniture=[]; furnitureMeshes={}; state.selectedId=null;
+  document.getElementById('propPanel').style.display='none';
+  document.getElementById('roomW').value=14; document.getElementById('roomD').value=12; document.getElementById('roomH').value=9;
+  updateRoom(); updateItemCount(); deselectAll();
+}
+
+function resetCamera() {
+  orbitState={theta:0.5,phi:0.9,radius:28,target:new THREE.Vector3(0,state.room.h/2,0)};
+  updateCameraPosition();
+}
+
+// ─── Presets ──────────────────────────────────────────────────────────────
+const PRESETS = {
+  living:  {w:16,d:14,h:9, wall:'#d8ccbe',floor:'#b8a882',ceil:'#f0ebe3', furniture:['sofa','coffeetable','armchair','tvstand','rug','lamp','plant']},
+  bedroom: {w:13,d:12,h:9, wall:'#d4ccd8',floor:'#8a7060',ceil:'#f0ebe3', furniture:['kingsizebed','dresser','wardrobe','sidetable','sidetable','lamp']},
+  kitchen: {w:12,d:10,h:9, wall:'#e8dfd4',floor:'#c8c0b0',ceil:'#ffffff', furniture:['kitchen_counter','kitchen_counter','kitchen_island','sink']},
+  bathroom:{w:9, d:8, h:8, wall:'#c8d8d0',floor:'#c8c8c8',ceil:'#ffffff', furniture:['bathtub','toilet','sink','shower']},
+  office:  {w:12,d:10,h:9, wall:'#c8d4d0',floor:'#6a5a4a',ceil:'#f0ebe3', furniture:['desk','armchair','bookshelf','lamp','plant']},
+  dining:  {w:13,d:12,h:9, wall:'#d8d0c4',floor:'#9a8870',ceil:'#f0ebe3', furniture:['diningtable','armchair','armchair','armchair','armchair']},
+};
+function loadPreset(name) {
+  const p=PRESETS[name]; if(!p)return;
+  state.furniture.forEach(item=>{ const m=furnitureMeshes[item.id]; if(m)scene3d.remove(m); });
+  state.furniture=[]; furnitureMeshes={}; deselectAll();
+  state.room={w:p.w,d:p.d,h:p.h};
+  ['W','D','H'].forEach(k=>{ document.getElementById('room'+k).value=state.room[k.toLowerCase()]; document.getElementById('room'+k+'Val').textContent=state.room[k.toLowerCase()]+' ft'; });
+  state.wallColor=p.wall; state.floorColor=p.floor; state.ceilingColor=p.ceil;
+  buildRoom();
+  p.furniture.forEach((type,i)=>{
+    const def=FURNITURE_DEFS[type]; if(!def)return;
+    const cols=Math.min(3,Math.ceil(Math.sqrt(p.furniture.length)));
+    const item={id:state.nextId++,type,name:def.name,x:(i%cols-(cols-1)/2)*4,z:(Math.floor(i/cols)-1)*4,rotation:0,color:def.color,w:def.w,h:def.h,d:def.d,style:def.style};
+    item.x=Math.max(-p.w/2+def.w/2,Math.min(p.w/2-def.w/2,item.x));
+    item.z=Math.max(-p.d/2+def.d/2,Math.min(p.d/2-def.d/2,item.z));
+    state.furniture.push(item); createFurnitureMesh(item);
+  });
+  updateItemCount(); updateRoomInfo(); renderStyleSwatches();
+}
+
+// ─── Style ────────────────────────────────────────────────────────────────
+function renderSwatches(cid, colors, sel, cb) {
+  const c=document.getElementById(cid); if(!c)return;
+  c.innerHTML='';
+  colors.forEach(col=>{
+    const s=document.createElement('div');
+    s.className='swatch'+(col===sel?' selected':'');
+    s.style.background=col;
+    s.onclick=()=>{ c.querySelectorAll('.swatch').forEach(x=>x.classList.remove('selected')); s.classList.add('selected'); cb(col); };
+    c.appendChild(s);
+  });
+}
+function renderStyleSwatches() {
+  renderSwatches('wallSwatches',  WALL_COLORS,  state.wallColor,  c=>{ state.wallColor=c;  buildRoom(); rebuildAll(); });
+  renderSwatches('floorSwatches', FLOOR_COLORS, state.floorColor, c=>{ state.floorColor=c; buildRoom(); rebuildAll(); });
+  renderSwatches('ceilingSwatches',CEIL_COLORS, state.ceilingColor,c=>{ state.ceilingColor=c;buildRoom();rebuildAll(); });
+}
+function rebuildAll() { state.furniture.forEach(item=>{ const o=furnitureMeshes[item.id]; if(o)scene3d.remove(o); createFurnitureMesh(item); }); }
+function updateLight() {
+  const v=parseFloat(document.getElementById('lightSlider').value);
+  document.getElementById('lightVal').textContent=v.toFixed(2);
+  const a=scene3d.getObjectByName('ambient'); if(a)a.intensity=v;
+}
+
+// ─── View Modes ───────────────────────────────────────────────────────────
+function setView(mode, btn) {
+  state.viewMode=mode;
+  document.querySelectorAll('.view-mode-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  const c3=document.getElementById('mainCanvas'), c2=document.getElementById('floorCanvas');
+  if(mode==='3d'){ c3.style.display='block'; c2.style.display='none'; }
+  else { c3.style.display='none'; c2.style.display='block'; drawFloorPlan(); }
+}
+
+function drawFloorPlan() {
+  const canvas=document.getElementById('floorCanvas');
+  const parent=canvas.parentElement; const rect=parent.getBoundingClientRect();
+  const tbH=document.querySelector('.view-toolbar').offsetHeight||36;
+  const sbH=document.querySelector('.status-bar').offsetHeight||28;
+  canvas.width=rect.width; canvas.height=rect.height-tbH-sbH;
+  const ctx=canvas.getContext('2d');
+  const {w,d}=state.room;
+  const scale=Math.min((rect.width-80)/w,(canvas.height-80)/d);
+  const ox=rect.width/2, oy=canvas.height/2;
+  ctx.fillStyle='#151210'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=state.floorColor; ctx.fillRect(ox-w*scale/2,oy-d*scale/2,w*scale,d*scale);
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+  for(let x=-w/2;x<=w/2;x++){ctx.beginPath();ctx.moveTo(ox+x*scale,oy-d*scale/2);ctx.lineTo(ox+x*scale,oy+d*scale/2);ctx.stroke();}
+  for(let z=-d/2;z<=d/2;z++){ctx.beginPath();ctx.moveTo(ox-w*scale/2,oy+z*scale);ctx.lineTo(ox+w*scale/2,oy+z*scale);ctx.stroke();}
+  ctx.strokeStyle=state.wallColor; ctx.lineWidth=8; ctx.strokeRect(ox-w*scale/2,oy-d*scale/2,w*scale,d*scale);
+  state.furniture.forEach(item=>{
+    const fx=ox+item.x*scale, fz=oy+item.z*scale;
+    ctx.save(); ctx.translate(fx,fz); ctx.rotate(item.rotation*Math.PI/180);
+    ctx.fillStyle=item.color; ctx.fillRect(-item.w*scale/2,-item.d*scale/2,item.w*scale,item.d*scale);
+    if(state.selectedId===item.id){ctx.strokeStyle='#c8a96e';ctx.lineWidth=2;ctx.strokeRect(-item.w*scale/2,-item.d*scale/2,item.w*scale,item.d*scale);}
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`${Math.max(8,Math.min(11,item.w*scale/item.name.length*1.2))}px DM Sans`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(item.w*scale>22&&item.d*scale>12) ctx.fillText(item.name,0,0);
+    ctx.restore();
+  });
+  ctx.fillStyle='#7a7268'; ctx.font='11px DM Sans'; ctx.textAlign='center';
+  ctx.fillText(`${w} ft`,ox,oy+d*scale/2+22);
+  ctx.save(); ctx.translate(ox-w*scale/2-22,oy); ctx.rotate(-Math.PI/2); ctx.fillText(`${d} ft`,0,0); ctx.restore();
+}
+
+// ─── Screenshot ───────────────────────────────────────────────────────────
+function saveScreenshot() {
+  renderer.render(scene3d, camera);
+  const link=document.createElement('a'); link.download='roomcraft.png';
+  link.href=document.getElementById('mainCanvas').toDataURL(); link.click();
+}
+
+// ─── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='style') renderStyleSwatches();
+}
+
+// ─── Product URL import via Claude API ───────────────────────────────────
+async function importFromUrl() {
+  const url = document.getElementById('productUrl').value.trim();
+  if (!url || !url.startsWith('http')) {
+    setUrlStatus('⚠️ Please enter a valid URL starting with https://', 'warn');
+    return;
+  }
+
+  setUrlStatus('🔍 Fetching product dimensions…', 'loading');
+  document.querySelector('[onclick="importFromUrl()"]').disabled = true;
+
+  const prompt = `You are a product dimension extractor. The user has provided this product URL:
+${url}
+
+Use your web_search tool to look up this product and find its exact dimensions.
+Find: product name, width, depth/length, and height.
+Convert everything to DECIMAL FEET (e.g. 30 inches = 2.5 ft, 76cm = 2.49 ft).
+
+Respond ONLY with a valid JSON object, no markdown, no explanation:
+{"name":"Product Name","width_ft":2.5,"depth_ft":3.0,"height_ft":2.8,"source":"where you found dims","confidence":"high|medium|low"}
+
+If you cannot find dimensions, respond: {"error":"reason"}`;
+
+  try {
+    // Route through corsproxy.io so this works when opened as a local file
+    const apiUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.anthropic.com/v1/messages');
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+
+    // Extract the final text block (after any tool use)
+    const textBlocks = (data.content || []).filter(b => b.type === 'text');
+    const rawText = textBlocks.map(b => b.text).join('').trim();
+
+    // Parse JSON — strip any accidental markdown fences
+    const clean = rawText.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    if (result.error) {
+      setUrlStatus('❌ Could not find dimensions: ' + result.error, 'error');
+      return;
+    }
+
+    // Populate the manual form with the found dimensions
+    document.getElementById('customName').value = result.name || 'Product';
+    document.getElementById('customW').value    = parseFloat(result.width_ft.toFixed(2));
+    document.getElementById('customD').value    = parseFloat(result.depth_ft.toFixed(2));
+    document.getElementById('customH').value    = parseFloat(result.height_ft.toFixed(2));
+
+    const conf = result.confidence === 'high' ? '✅' : result.confidence === 'medium' ? '⚠️' : '❓';
+    setUrlStatus(
+      conf + ' <strong style="color:var(--text)">' + result.name + '</strong><br>' +
+      'W: ' + result.width_ft + ' ft &nbsp; D: ' + result.depth_ft + ' ft &nbsp; H: ' + result.height_ft + ' ft<br>' +
+      '<span style="color:var(--muted)">Source: ' + (result.source || 'web') + '</span><br>' +
+      '<em style="color:var(--muted)">Review dimensions below, then click Add to Room.</em>',
+      'success'
+    );
+
+  } catch(err) {
+    if (err.message.includes('Failed to fetch') || err.message.includes('Load failed') || err.message.includes('NetworkError')) {
+      setUrlStatus('❌ Network error — make sure you're connected to the internet and try again. If it keeps failing, the proxy may be temporarily down.', 'error');
+    } else if (err.message.includes('JSON')) {
+      setUrlStatus('❌ Unexpected response from AI — try a different product URL.', 'error');
+    } else {
+      setUrlStatus('❌ Error: ' + err.message, 'error');
+    }
+    console.error(err);
+  } finally {
+    document.querySelector('[onclick="importFromUrl()"]').disabled = false;
+  }
+}
+
+function setUrlStatus(msg, type) {
+  const el = document.getElementById('urlStatus');
+  el.style.display = 'block';
+  el.innerHTML = msg;
+  el.style.color = type === 'error' ? 'var(--danger)'
+                 : type === 'success' ? 'var(--success)'
+                 : type === 'warn' ? 'var(--accent)'
+                 : 'var(--muted)';
+}
+
+// ─── Scan rescale (calibration) ──────────────────────────────────────────
+function rescaleScan() {
+  if (!scanGroup) return;
+  const mult = parseFloat(document.getElementById('calibSlider').value);
+  document.getElementById('calibVal').textContent = mult.toFixed(2) + '×';
+  const newScale = state.rawScanScale * mult;
+  scanGroup.scale.setScalar(newScale);
+
+  // Re-center after rescale
+  const b = new THREE.Box3().setFromObject(scanGroup);
+  const c = b.getCenter(new THREE.Vector3());
+  scanGroup.position.y = -b.min.y;
+  scanGroup.position.x = -c.x;
+  scanGroup.position.z = -c.z;
+
+  // Update displayed dims
+  const s = b.getSize(new THREE.Vector3());
+  const dimW = parseFloat(s.x.toFixed(1));
+  const dimH = parseFloat(s.y.toFixed(1));
+  const dimD = parseFloat(s.z.toFixed(1));
+  document.getElementById('sdW').textContent = dimW + ' ft';
+  document.getElementById('sdD').textContent = dimD + ' ft';
+  document.getElementById('sdH').textContent = dimH + ' ft';
+  state.room.w = Math.max(6, Math.round(dimW));
+  state.room.d = Math.max(6, Math.round(dimD));
+  state.room.h = Math.max(7, Math.round(dimH * 10) / 10);
+  document.getElementById('roomW').value = state.room.w;
+  document.getElementById('roomD').value = state.room.d;
+  document.getElementById('roomH').value = state.room.h;
+  document.getElementById('roomWVal').textContent = state.room.w + ' ft';
+  document.getElementById('roomDVal').textContent = state.room.d + ' ft';
+  document.getElementById('roomHVal').textContent = state.room.h + ' ft';
+  document.getElementById('scanInfo').textContent = 'Scan: ' + dimW + '×' + dimD + '×' + dimH + ' ft';
+  updateRoomInfo();
+}
+
+// ─── Animate ──────────────────────────────────────────────────────────────
+function animate() { requestAnimationFrame(animate); if(state.viewMode==='3d') renderer.render(scene3d,camera); }
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initThree();
+  renderStyleSwatches();
+  // Wire file input here — more reliable than inline onchange from file://
+  document.getElementById('glbInput').addEventListener('change', function() {
+    alert('DEBUG: file input changed, files=' + this.files.length);
+    if (this.files && this.files[0]) {
+      loadGLB(this.files[0]);
+    } else {
+      alert('DEBUG: no file in input');
+    }
+    // Reset so same file can be re-selected
+    this.value = '';
+  });
+});
+window.addEventListener('resize', () => { resizeRenderer(); if(state.viewMode==='top') drawFloorPlan(); });
+</script>
+</body>
+</html>
